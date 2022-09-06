@@ -6,6 +6,7 @@
 
 // EMTF HLS
 #include "emtf_hlslib.h"
+#include "alternate.h"
 
 using namespace emtf::phase2;
 
@@ -264,4 +265,135 @@ void EMTFModel::fit_impl_v3(const Vector& in0, Vector& out) const {
       *(out_iter++) = (trk_valid_rm[itrk]) ? trk_invpt[itrk] : invalid_marker_trk_invpt;
     }
   }  // end loop over out
+
+
+
+      /************** Alternate inputs by site (w/new definition of site - ME & RE ring 1 and 2 are separate) *****************/
+      
+      prompt_trkbuild::emtf_seg_t emtf_segs[prompt_trkbuild::num_sites][prompt_trkbuild::max_ch_site][prompt_trkbuild::max_seg_ch];
+
+      prompt_trkbuild::convert_input(emtf_phi, emtf_theta1, emtf_theta2, emtf_bend, 
+                                     emtf_qual1, emtf_time, seg_zones, seg_tzones, 
+                                     seg_bx, seg_valid, emtf_segs);
+
+      prompt_trkbuild::hitmap_t hitmaps[3][8];
+      prompt_trkbuild::build_hitmaps(emtf_segs, hitmaps);
+
+      prompt_trkbuild::patt_match_t patt_matches[3][288];
+      prompt_trkbuild::match_patterns(hitmaps, patt_matches);
+
+      prompt_trkbuild::best_trk_t best_tracks[4];
+      prompt_trkbuild::find_best_tracks(patt_matches, best_tracks);
+
+      std::cout << std::endl;
+      prompt_trkbuild::emtf_seg_t trk_features_test[4][12];
+      prompt_trkbuild::emtf_phi_t ph_median_test[4];
+      prompt_trkbuild::emtf_theta_t th_median_test[4];
+      prompt_trkbuild::trk_building(best_tracks, emtf_segs, trk_features_test, ph_median_test, th_median_test);
+      /*********************************************************************************************************************/
+
+
+      /****************************************** TEST ZONING *****************************************************************/
+      for(int zone=0; zone<3; zone++){
+          for(int row=0; row<8; row++){
+
+            ap_uint<288> target;
+              if( zone == 0)
+                  target = zoning_0_out[row];
+              else if(zone == 1)
+                  target = zoning_1_out[row];
+              else
+                  target = zoning_2_out[row];
+
+              if(target != hitmaps[zone][row]){
+                  std::cout << "\n\nFailed Comparison. \tZone: " << zone << "\tRow: " << row << std::endl;
+
+                  std::cout << std::hex << target << std::endl;
+                  std::cout << std::hex << hitmaps[zone][row] << "\n\n" << std::dec;
+
+              }
+          }
+      }
+
+      /****************************************** TEST POOLING *****************************************************************/
+      for(int zone=0; zone<3; zone++){
+          for(int col=0; col<288; col++){
+            ap_uint<9> target;
+              if( zone == 0)
+                  target = pooling_0_out[col];
+              else if(zone == 1)
+                  target = pooling_1_out[col];
+              else
+                  target = pooling_2_out[col];
+
+              if(target != ap_uint<9>( (patt_matches[zone][col].patt,patt_matches[zone][col].qual)) ){
+                  std::cout << "\n\nFailed Comparison. \tZone: " << zone << "\tColumn: " << col << std::endl;
+                  std::cout << std::hex << target << std::endl;
+                  std::cout << std::hex << ap_uint<9>((patt_matches[zone][col].patt,patt_matches[zone][col].qual)) << "\n\n" << std::dec;
+              }
+          }
+      }
+
+      /****************************************** TEST SORTING AND MERGING *****************************************************************/
+      for(int trk=0; trk<4; trk++){
+        if( zonemerging_0_out[trk].range(5,0) != 0 and zonemerging_0_out[trk] != ap_uint<20>((best_tracks[trk].zone, best_tracks[trk].col, best_tracks[trk].patt, best_tracks[trk].qual)) ){
+            std::cout << "\n\nFailed Comparison. \tTrack: " << trk << std::endl;
+            std::cout << "Quality: " << zonemerging_0_out[trk].range(5,0) << " vs " << best_tracks[trk].qual << std::endl;
+            std::cout << "Pattern: " << zonemerging_0_out[trk].range(8,6) << " vs " << best_tracks[trk].patt << std::endl;
+            std::cout << "Column: " << zonemerging_0_out[trk].range(17,9) << " vs " << best_tracks[trk].col << std::endl;
+            std::cout << "Zone: " << zonemerging_0_out[trk].range(19,18) << " vs " << best_tracks[trk].zone << std::endl;
+        }
+      }
+
+      /****************************************** TEST Track Building ***********************************************************************/
+
+      /*
+      for(int trk=0; trk<4; trk++){
+        for(int feat=0; feat<40; feat++){
+            std::cout << trk_feat[trk*num_emtf_features + feat] << ", ";
+        }
+        std::cout << std::endl;
+      }
+      */
+
+      for(int trk=0; trk<4; trk++){
+        if( trk_feat[trk*num_emtf_features + 38] != 0){
+            for(int feat=0; feat<12; feat++){
+                int diff_test; 
+                if( trk_features_test[trk][feat].seg_valid == 1)
+                    diff_test = int(trk_features_test[trk][feat].emtf_phi) - int(ph_median_test[trk]);
+                else
+                    diff_test = 0;
+
+                int diff =  int(trk_feat[trk * num_emtf_features + feat]);
+                if( diff_test != diff)
+                    std::cout << diff << " vs " << diff_test << "\t";
+            }
+
+            for(int feat=12; feat<24; feat++){
+                int diff_test; 
+                if( trk_features_test[trk][feat-12].seg_valid == 1)
+                    diff_test = int(trk_features_test[trk][feat-12].emtf_theta1) - int(th_median_test[trk]);
+                else
+                    diff_test = 0;
+
+                int diff =  int(trk_feat[trk * num_emtf_features + feat]);
+                if( diff_test != diff)
+                    std::cout << diff << " vs " << diff_test << "\t";
+            }
+
+            // Compare Phi median
+            if(int(ph_median_test[trk]) - 2744 != trk_feat[trk*num_emtf_features + 36])
+                std::cout << "Phi median difference, trk: " << trk << "\t" << ph_median_test[trk] << " vs " << trk_feat[trk*num_emtf_features + 36] << std::endl;
+
+            // Compare Th median
+            if(th_median_test[trk] != trk_feat[trk*num_emtf_features + 37])
+                std::cout << "Th median difference, trk: " << trk << "\t" << th_median_test[trk] << " vs " << trk_feat[trk*num_emtf_features + 37] << std::endl;
+        }
+      }
+
+
+      /*********************************************************************************************************************/
+
+
 }
