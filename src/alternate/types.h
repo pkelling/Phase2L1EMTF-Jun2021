@@ -111,6 +111,12 @@ typedef struct {
 } best_trk_t;
 
 
+typedef struct {
+    ap_uint<3> ichamber;
+    ap_uint<4> iseg;
+    ap_uint<1> isite;
+} seg_id_t;
+
 
 } // namespace
 

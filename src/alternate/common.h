@@ -40,6 +40,7 @@ constexpr int num_hitmap_cols = 288;
 
 const int max_sites_in_row = 4;
 constexpr int max_num_layers = 12;
+const int max_chambers_in_layer = 11; // Layer for ring 1 and ring 2
 
 const int no_site = -1;
 const int sites_by_row[num_zones][num_hitmap_rows][max_sites_in_row] = 
@@ -83,7 +84,7 @@ const int sites_by_row[num_zones][num_hitmap_rows][max_sites_in_row] =
 
 
 // Some sites are combined into 1 layer for the NN (ordered based on Jia Fus NN)
-const int map_sites_to_layers[max_num_layers][2] = { 
+const int map_layers_to_sites[max_num_layers][2] = { 
                                     {ME11, no_site}, 
                                     {ME12, no_site},
                                     {ME21, ME22},
@@ -97,6 +98,14 @@ const int map_sites_to_layers[max_num_layers][2] = {
                                     {GE21, no_site},
                                     {ME0, no_site}
 };
+
+
+const int map_layers_to_zone_rows[num_zones][max_num_layers] = {
+                { 2, -1, 4, 5, 7, -1, -1, 6, 7,  1,  3,  0},
+                { 1,  2, 4, 5, 7,  2, -1, 6, 7,  0,  3, -1},
+                { -1, 0, 3, 4, 6,  1,  2, 5, 7, -1, -1, -1}
+};
+
 
 }  // namespace 
 
