@@ -288,7 +288,6 @@ void EMTFModel::fit_impl_v3(const Vector& in0, Vector& out) const {
       prompt_trkbuild::trk_feat_t trk_features_alt[4][40]; 
       prompt_trkbuild::seg_id_t trk_seg_ids_alt[4][12];
       prompt_trkbuild::trk_building(best_tracks, emtf_segs, trk_features_alt, trk_seg_ids_alt);
-      prompt_trkbuild::trk_building(best_tracks, emtf_segs, trk_features_test, trk_seg_ids, ph_median_test, th_median_test);
       /*********************************************************************************************************************/
 
 
