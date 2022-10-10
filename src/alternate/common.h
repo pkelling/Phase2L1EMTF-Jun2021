@@ -42,6 +42,21 @@ const int max_sites_in_row = 4;
 constexpr int max_num_layers = 12;
 const int max_chambers_in_layer = 11; // Layer for ring 1 and ring 2
 
+
+// Chamber Types
+const int num_site_types = 3;
+enum Angle_Types { ten_deg=0, twenty_deg=1, twenty_me0=2 };
+
+const int unsigned type_by_site[num_sites] = { 
+                                            ten_deg, ten_deg, ten_deg, // twenty_me0, ten_deg, ten_deg,               // Station 0 
+                                            ten_deg, ten_deg,                           // Station 1
+                                            twenty_deg, ten_deg, twenty_deg, ten_deg,   // Station 2
+                                            twenty_deg, ten_deg, twenty_deg, ten_deg,   // Station 3
+                                            twenty_deg, ten_deg, twenty_deg, ten_deg    // Staiton 4
+};
+
+// Hitmap Information
+
 const int no_site = -1;
 const int sites_by_row[num_zones][num_hitmap_rows][max_sites_in_row] = 
 { 

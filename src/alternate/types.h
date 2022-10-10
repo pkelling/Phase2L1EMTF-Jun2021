@@ -75,6 +75,7 @@ typedef ap_uint<6> trk_qual_t;
 typedef ap_uint<3> trk_patt_t;
 typedef ap_uint<9> trk_col_t;
 typedef ap_uint<2> trk_zone_t;
+typedef ap_int<13> trk_feat_t;
 
 /*
 typedef ap_uint<2> trk_gate_t;
@@ -112,10 +113,17 @@ typedef struct {
 
 
 typedef struct {
+    ap_uint<1> isite; // within layer
     ap_uint<3> ichamber;
     ap_uint<4> iseg;
-    ap_uint<1> isite;
+    ap_uint<2> ibx;
 } seg_id_t;
+
+
+typedef struct {
+   emtf_seg_t emtf_seg;
+   seg_id_t   seg_id;
+} attached_seg_t;
 
 
 } // namespace

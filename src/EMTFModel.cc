@@ -284,10 +284,10 @@ void EMTFModel::fit_impl_v3(const Vector& in0, Vector& out) const {
       prompt_trkbuild::best_trk_t best_tracks[4];
       prompt_trkbuild::find_best_tracks(patt_matches, best_tracks);
 
-      prompt_trkbuild::emtf_seg_t trk_features_test[4][12];
-      prompt_trkbuild::emtf_phi_t ph_median_test[4];
-      prompt_trkbuild::emtf_theta_t th_median_test[4];
-      prompt_trkbuild::seg_id_t   trk_seg_ids[4][12];
+      std::cout << std::endl;
+      prompt_trkbuild::trk_feat_t trk_features_alt[4][40]; 
+      prompt_trkbuild::seg_id_t trk_seg_ids_alt[4][12];
+      prompt_trkbuild::trk_building(best_tracks, emtf_segs, trk_features_alt, trk_seg_ids_alt);
       prompt_trkbuild::trk_building(best_tracks, emtf_segs, trk_features_test, trk_seg_ids, ph_median_test, th_median_test);
       /*********************************************************************************************************************/
 
@@ -349,72 +349,38 @@ void EMTFModel::fit_impl_v3(const Vector& in0, Vector& out) const {
       /****************************************** TEST Track Building ***********************************************************************/
 
       for(int trk=0; trk<4; trk++){
-        if( trk_feat[trk*num_emtf_features + 38] != 0){
-            for(int feat=0; feat<12; feat++){
-                int diff_test;
-                if( trk_features_test[trk][feat].seg_valid == 1)
-                    diff_test = int(trk_features_test[trk][feat].emtf_phi) - int(ph_median_test[trk]);
-                else
-                    diff_test = 0;
-
-                int diff =  int(trk_feat[trk * num_emtf_features + feat]);
-                if( diff_test != diff){
-                    passed = 0;
-                    std::cout << diff << " vs " << diff_test << "\t";
-                }
-            }
-
-            for(int feat=12; feat<24; feat++){
-                int diff_test;
-                if( trk_features_test[trk][feat-12].seg_valid == 1)
-                    diff_test = int(trk_features_test[trk][feat-12].emtf_theta1) - int(th_median_test[trk]);
-                else
-                    diff_test = 0;
-
-                int diff =  int(trk_feat[trk * num_emtf_features + feat]);
-                if( diff_test != diff){
-                    std::cout << diff << " vs " << diff_test << "\t";
-                    passed = 0;
-                }
-            }
-
-            // Compare Phi median
-            if(int(ph_median_test[trk]) - 2744 != trk_feat[trk*num_emtf_features + 36]){
-                std::cout << "Phi median difference, trk: " << trk << "\t" << ph_median_test[trk] << " vs " << trk_feat[trk*num_emtf_features + 36] << std::endl;
-                passed = 0;
-            }
-
-            // Compare Th median
-            if(th_median_test[trk] != trk_feat[trk*num_emtf_features + 37]){
-                std::cout << "Th median difference, trk: " << trk << "\t" << th_median_test[trk] << " vs " << trk_feat[trk*num_emtf_features + 37] << std::endl;
-                passed = 0;
-            }
-        }
+          for(int feat=0; feat<40; feat++){
+              if( trk_features_alt[trk][feat] != trk_feat[trk *num_emtf_features + feat]){
+                  std::cout << trk_features_alt[trk][feat] << " vs " << trk_feat[trk *num_emtf_features + feat] << "\t";
+                  passed = 0;
+              }
+          }
       }
 
-      if(passed)
-        std::cout << "Comparison Passed" << std::endl;
 
-      for (unsigned iseg = 0; iseg < model_config::n_in; iseg++) {
-        if(seg_valid[iseg]){
-          std::cout << "\n" << "Seg: " << iseg << " - ";
-          std::cout << emtf_phi[iseg] << ", ";
-          std::cout << emtf_bend[iseg]  << ", ";
-          std::cout << emtf_theta1[iseg]  << ", ";
-          std::cout << emtf_theta2[iseg]  << ", ";
-          std::cout << emtf_qual1[iseg]  << ", ";
-          std::cout << emtf_qual2[iseg]  << ", ";
-          std::cout << emtf_time[iseg]  << ", ";
-          std::cout << seg_zones[iseg]  << ", ";
-          std::cout << seg_tzones[iseg]  << ", ";
-          std::cout << seg_cscfr[iseg]  << ", ";
-          std::cout << seg_gemdl[iseg]  << ", ";
-          std::cout << seg_bx[iseg]  << ", ";
-          std::cout << seg_valid[iseg];
-        }
-      }  // end loop over in0
-      std::cout << std::endl;
 
-      /*********************************************************************************************************************/
+      if(!passed){
+          for (unsigned iseg = 0; iseg < model_config::n_in; iseg++) {
+              if(seg_valid[iseg]){
+                  std::cout << "\n" << "Seg: " << iseg << " - ";
+                  std::cout << emtf_phi[iseg] << ", ";
+                  std::cout << emtf_bend[iseg]  << ", ";
+                  std::cout << emtf_theta1[iseg]  << ", ";
+                  std::cout << emtf_theta2[iseg]  << ", ";
+                  std::cout << emtf_qual1[iseg]  << ", ";
+                  std::cout << emtf_qual2[iseg]  << ", ";
+                  std::cout << emtf_time[iseg]  << ", ";
+                  std::cout << seg_zones[iseg]  << ", ";
+                  std::cout << seg_tzones[iseg]  << ", ";
+                  std::cout << seg_cscfr[iseg]  << ", ";
+                  std::cout << seg_gemdl[iseg]  << ", ";
+                  std::cout << seg_bx[iseg]  << ", ";
+                  std::cout << seg_valid[iseg];
+              }
+          }  // end loop over in0
+          std::cout << std::endl;
+      }
+
+  /*********************************************************************************************************************/
 
 }
