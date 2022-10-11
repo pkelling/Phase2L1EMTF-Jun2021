@@ -356,6 +356,14 @@ void EMTFModel::fit_impl_v3(const Vector& in0, Vector& out) const {
           }
       }
 
+      
+      /************* Check Zones *************/
+      for(int trk=0; trk<4; trk++){
+        int zone = zonemerging_0_out[trk].range(19,18);
+        int th_median = trk_features_alt[trk][37];
+        std::cout << "Zone: " << zone << "\tTh_median: " << th_median << std::endl;
+      }
+      std::cout << std::endl;
 
 
       if(!passed){
