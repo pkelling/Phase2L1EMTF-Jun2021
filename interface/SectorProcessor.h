@@ -47,6 +47,16 @@ namespace emtf {
                              const SubsystemCollection& muon_primitives,
                              const EMTFHitCollection& out_hits,
                              const EMTFTrackCollection& out_tracks) const;
+
+
+      int ge11_phi_conv(int chamber, int ph_init, int hs) const;
+      int ge21_phi_conv(int chamber, int ph_init, int hs) const;
+      void create_csc_luts(const EMTFWorker& iWorker) const;
+      void create_gem_luts(const EMTFWorker& iWorker) const;
+      void create_me0_luts(const EMTFWorker& iWorker) const;
+
+      void test_dump(const EMTFWorker& iWorker, const SubsystemCollection& muon_primitives) const;
+
     };
 
     // Implementation of the templated classes and functions
