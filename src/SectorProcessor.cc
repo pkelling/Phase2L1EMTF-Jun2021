@@ -40,9 +40,8 @@ void SectorProcessor::process(const EMTFWorker& iWorker,
     //test_dump(iWorker, muon_primitives);
     //create_csc_luts(iWorker);
   }
-#endif
-
   return;
+#endif
 
   // Loop over BX
   for (int bx = iWorker.minBX_; bx <= iWorker.maxBX_; ++bx) {
@@ -54,7 +53,7 @@ void SectorProcessor::process(const EMTFWorker& iWorker,
     // Only BX=0 is supported at the moment
     EMTFTrackCollection sector_tracks;
     if (bx == 0) {
-      //process_step_2(iWorker, endcap, sector, bx, sector_hits, sector_tracks);
+      process_step_2(iWorker, endcap, sector, bx, sector_hits, sector_tracks);
     }
 
     // 3 - Postprocessing
@@ -139,11 +138,6 @@ void SectorProcessor::process_step_1(const EMTFWorker& iWorker,
 
         } else if constexpr (std::is_same_v<T1, me0_subsystem_tag>) {
           // Do nothing
-          if(endcap == 1 && sector == 1 && bx==0){
-            std::cout << detid << std::endl;
-            std::cout << digi << std::endl;
-          }
-
         } else {
           // Make sure every subsystem type has been visited
           static_assert(dependent_false<T1>::value, "unreachable!");
@@ -690,58 +684,61 @@ void SectorProcessor::create_csc_luts(const EMTFWorker& iWorker) const {
   int ring = 1;
   int layer = 0;
   int chamber = 27;
-  uint16_t strip = 202;
+  uint16_t strip = 15;
   uint16_t quality = 14;
   uint16_t keywire = 10;
   uint16_t pattern = 8;
   uint16_t bend = 1;
   uint16_t bx = 8; // for DIGI
+
+  //unsigned low_point_phi = 0;
   
-  for( chamber = 2; chamber < 3; chamber++){
-    for( strip=0; strip < (128 + 96); strip++){
+  for( chamber = 1; chamber < 36; chamber++){
+    for( strip=0; strip < 1; strip++){
+      for(keywire = 0; keywire<11; keywire+=10){
 
-      EMTFHit hit_o;
-      CSCDetId detid(endcap, station, ring, chamber, layer);
-      int sector_i = toolbox::get_trigger_sector(detid.ring(), detid.station(), detid.chamber());
-      sector_i = 1;
+        EMTFHit hit_o;
+        CSCDetId detid(endcap, station, ring, chamber, layer);
+        int sector_i = toolbox::get_trigger_sector(detid.ring(), detid.station(), detid.chamber());
 
-      std::cout << "St: " << station << "\tRing: " << ring << "\tSector: " << sector_i << std::endl;
-      
-      
-      CSCCorrelatedLCTDigi digi(1, 1, quality, keywire, strip, pattern, bend, bx, 1);
-      digi.setType(1);
+        CSCCorrelatedLCTDigi digi(1, 1, quality, keywire, strip, pattern, bend, bx, 1);
+        digi.setType(1);
 
-      uint16_t valid_cscid = toolbox::get_trigger_cscid(ring, station, chamber);
-      digi.setCSCID(valid_cscid);
+        uint16_t valid_cscid = toolbox::get_trigger_cscid(ring, station, chamber);
+        digi.setCSCID(valid_cscid);
 
-      using T4 = typename csc_subsystem_tag::detgeom_type;
-      auto&& detgeom = iWorker.geom_helper_->get<T4>();
-      SegmentFormatter::ChamberInfo chminfo;
+        using T4 = typename csc_subsystem_tag::detgeom_type;
+        auto&& detgeom = iWorker.geom_helper_->get<T4>();
+        SegmentFormatter::ChamberInfo chminfo;
 
-      std::map<std::pair<uint32_t, uint16_t>, std::vector<uint16_t> > csc_chamber_wire_ambi;
-      auto akey = std::make_pair(detid.rawId(), digi.getBX());
-      uint16_t tp_wire = digi.getKeyWG();
-      // If key and value both exist, do nothing. If key exists, but not value, insert value.
-      // If neither key nor value exists, insert both key and value.
-      auto found = csc_chamber_wire_ambi.find(akey);
-      if (found != csc_chamber_wire_ambi.end()) {
-        auto inner_found = std::find(found->second.begin(), found->second.end(), tp_wire);
-        if (inner_found != found->second.end()) {
-          // Do nothing
+        std::map<std::pair<uint32_t, uint16_t>, std::vector<uint16_t> > csc_chamber_wire_ambi;
+        auto akey = std::make_pair(detid.rawId(), digi.getBX());
+        uint16_t tp_wire = digi.getKeyWG();
+        // If key and value both exist, do nothing. If key exists, but not value, insert value.
+        // If neither key nor value exists, insert both key and value.
+        auto found = csc_chamber_wire_ambi.find(akey);
+        if (found != csc_chamber_wire_ambi.end()) {
+          auto inner_found = std::find(found->second.begin(), found->second.end(), tp_wire);
+          if (inner_found != found->second.end()) {
+            // Do nothing
+          } else {
+            found->second.push_back(tp_wire);
+          }
         } else {
-          found->second.push_back(tp_wire);
+          csc_chamber_wire_ambi[akey].push_back(tp_wire);
         }
-      } else {
-        csc_chamber_wire_ambi[akey].push_back(tp_wire);
+        chminfo.wire_ambi = csc_chamber_wire_ambi.at(akey);
+
+        formatter.format(endcap, sector_i, 0, 0, detgeom, detid, digi, chminfo, hit_o);
+
+        std::cout << detid.chamberName() << " - " << hit_o.strip() << "," << hit_o.wire1() << "\tPhi: " << hit_o.emtfPhi() << std::endl;
+        
+        //std::cout << "St: " << station << "\tRing: " << ring << "\tSector: " << sector_i << std::endl;
+        //std::cout << "Strip " << hit_o.strip() << " - Phi: " << hit_o.emtfPhi() << std::endl;
+        //std::cout << "WG  " << hit_o.wire1() << " - Theta: " << hit_o.emtfTheta1() << std::endl << std::endl;
+
       }
-      chminfo.wire_ambi = csc_chamber_wire_ambi.at(akey);
-
-      formatter.format(endcap, sector_i, 0, 0, detgeom, detid, digi, chminfo, hit_o);
-
-      std::cout << detid.chamberName() << std::endl;
-      std::cout << "Strip " << hit_o.strip() << " - Phi: " << hit_o.emtfPhi() << std::endl;
-      std::cout << "WG  " << hit_o.wire1() << " - Theta: " << hit_o.emtfTheta1() << std::endl << std::endl;
-
+      std::cout << std::endl;
     }
   }
 
@@ -749,32 +746,32 @@ void SectorProcessor::create_csc_luts(const EMTFWorker& iWorker) const {
 
 
 void SectorProcessor::create_me0_luts(const EMTFWorker& iWorker) const {
-  static const int me0_max_partition = 16;  // limited to eta of 2.4
-  static const int me0_nstrips = 384;
-  static const int me0_nphipositions = me0_nstrips * 2;
+  static const int me0_max_partition = 8;  // limited to eta of 2.4
+  //static const int me0_nstrips = 384;
+  //static const int me0_nphipositions = me0_nstrips * 2;
 
   // create detid, detgeom, and digi
   int region = +1; // endcap +- 1
   int chamber = 1;
   int roll = 1;
-  int hs = 0;
+  int hs = 75;
 
   std::cout << std::endl;
-  for(chamber = 1; chamber<=5; chamber++){
+  for(chamber = 1; chamber<=15; chamber++){
   for(roll = 0; roll < me0_max_partition; roll++){
     std::cout << "Chamber: " << chamber << "\tHalfstrip: " << hs << std::endl;
     SegmentFormatter::ChamberInfo chminfo;
     SegmentFormatter formatter;
     EMTFHit hit_o;
     
-    ME0DetId detid(region, 0, chamber, 1); // (region, layer, chamber, roll )
+    ME0DetId detid(region, 0, chamber, roll); // (region, layer, chamber, roll )
 
     using T4 = typename me0_subsystem_tag::detgeom_type;
     auto&& detgeom = iWorker.geom_helper_->get<T4>();
 
     //std::vector<uint16_t> digi_pads = {i};
     //GEMPadDigiCluster digiTest(digi_pads, 0); // (digi_pads, bx)
-    ME0TriggerDigi digi(chamber%2, 5, hs, roll, 20, 1, 8);
+    ME0TriggerDigi digi(chamber, 5, hs, roll, 20, 1, 8);
     /*ME0TriggerDigi digi(const int ichamberid,
                                  const int iquality,
                                  const int iphiposition,
@@ -784,13 +781,20 @@ void SectorProcessor::create_me0_luts(const EMTFWorker& iWorker) const {
                                  const int ibx)
     */
 
-    int sector = 1;
-    /*
+    int sector;
     if( chamber == 1)
       sector = 6;
-    else
+    else if(chamber < 5)
       sector = 1;
-    */
+    else if(chamber < 8)
+      sector = 2;
+    else if(chamber < 11)
+      sector = 3;
+    else if(chamber < 14)
+      sector = 4;
+    else
+      sector = 5;
+
     formatter.format(1,sector,0,0,detgeom, detid, digi, chminfo, hit_o);
     /*SegmentFormatter::format_impl(int endcap, 1:+  2:-
                                      int sector,
@@ -803,8 +807,10 @@ void SectorProcessor::create_me0_luts(const EMTFWorker& iWorker) const {
                                      EMTFHit& hit) const {
     */
     //std::cout << "Strip " << hit_o.strip() << " - Phi: " << hit_o.emtfPhi() << std::endl << std::endl;
-    std::cout << "WG  " << hit_o.wire1() << " - Theta: " << hit_o.emtfTheta1() << std::endl << std::endl;
+    //std::cout << "WG  " << hit_o.wire1() << " - Theta: " << hit_o.emtfTheta1() << std::endl << std::endl;
+    std::cout << "WG  " << hit_o.wire1() << " - Phi: " << hit_o.emtfPhi() << std::endl;
   }
+  std::cout << std::endl;
   }
  
   std::cout << std::endl;

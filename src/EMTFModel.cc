@@ -268,7 +268,6 @@ void EMTFModel::fit_impl_v3(const Vector& in0, Vector& out) const {
 
 
       /************** Alternate inputs by site (w/new definition of site - ME & RE ring 1 and 2 are separate) *****************/
-
       prompt_trkbuild::emtf_seg_t emtf_segs[prompt_trkbuild::num_sites][prompt_trkbuild::max_ch_site][prompt_trkbuild::max_seg_ch];
 
       prompt_trkbuild::convert_input(emtf_phi, emtf_theta1, emtf_theta2, emtf_bend,
@@ -284,7 +283,6 @@ void EMTFModel::fit_impl_v3(const Vector& in0, Vector& out) const {
       prompt_trkbuild::best_trk_t best_tracks[4];
       prompt_trkbuild::find_best_tracks(patt_matches, best_tracks);
 
-      std::cout << std::endl;
       prompt_trkbuild::trk_feat_t trk_features_alt[4][40]; 
       prompt_trkbuild::seg_id_t trk_seg_ids_alt[4][12];
       prompt_trkbuild::trk_building(best_tracks, emtf_segs, trk_features_alt, trk_seg_ids_alt);
@@ -358,12 +356,13 @@ void EMTFModel::fit_impl_v3(const Vector& in0, Vector& out) const {
 
       
       /************* Check Zones *************/
+      /*
       for(int trk=0; trk<4; trk++){
         int zone = zonemerging_0_out[trk].range(19,18);
         int th_median = trk_features_alt[trk][37];
         std::cout << "Zone: " << zone << "\tTh_median: " << th_median << std::endl;
       }
-      std::cout << std::endl;
+      */
 
 
       if(!passed){

@@ -3,6 +3,8 @@
 
 //#include "../emtf_hlslib/layer_helpers.h"
 #include <iostream>
+#include <fstream>
+#include <string>
 #include "common.h"
 #include "types.h"
 
@@ -23,6 +25,46 @@ void inline convert_input(  emtf_phi_t phi[230],
                         )
 {
     
+    static int evt_num = 0;
+    std::string evt_filename = "/eos/user/p/pakellin/emtf_tb_data/event_" + std::to_string(evt_num) + ".txt";
+    evt_num++;
+
+    // Write Event to file
+    std::fstream strm;
+    strm.open(evt_filename, std::ios_base::out);
+    if (strm.is_open()) {
+        // Write the valid segments
+        bool first_print = true;
+        for(int seg=0; seg<230; seg++){
+            if(valid[seg]){
+
+              // Quick fix to remove trailing comma
+              if(first_print){
+                first_print = false;
+                strm << seg << ", ";
+              }else
+                strm << ",\n" << seg << ", ";
+
+              strm << phi[seg] << ", ";
+              strm << th1[seg] << ", ";
+              strm << th2[seg] << ", ";
+              strm << bend[seg] << ", ";
+              strm << qual[seg] << ", ";
+              strm << seg_times[seg] << ", ";
+              strm << zones[seg] << ", ";
+              strm << tzones[seg] << ", ";
+              strm << bx[seg] << ", ";
+              strm << valid[seg];
+          }
+        }
+        strm.close();
+        if (strm.is_open())
+            std::cout << "Stream could not close!" << std::endl;
+    }
+    else{
+        std::cout<<"File could not be opened!"<<std::endl;
+    }
+
     
     /*
     int ch_ids[num_sites][max_ch_site] = {
