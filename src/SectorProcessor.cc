@@ -35,10 +35,10 @@ void SectorProcessor::process(const EMTFWorker& iWorker,
 #define EMTF_CREATE_FW_LUTS
 #ifdef EMTF_CREATE_FW_LUTS
   if( endcap == 1 && sector == 1){ // only runs once
-    create_me0_luts(iWorker);
+    //create_me0_luts(iWorker);
     //create_gem_luts(iWorker);
     //test_dump(iWorker, muon_primitives);
-    //create_csc_luts(iWorker);
+    create_csc_luts(iWorker);
   }
   return;
 #endif
