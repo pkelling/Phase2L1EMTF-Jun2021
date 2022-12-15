@@ -13,8 +13,9 @@ using namespace emtf::phase2;
 
 struct SegmentPrinter::compress_sector {
   constexpr int operator()(int tp_endcap, int tp_sector) const {
-    tp_endcap = (tp_endcap == -1) ? 2 : tp_endcap;  // using endcap [1,2] convention
-    return ((tp_endcap - MIN_ENDCAP) * (NUM_TRIGSECTORS / 2)) + (tp_sector - MIN_TRIGSECTOR);
+    //tp_endcap = (tp_endcap == -1) ? 2 : tp_endcap;  // using endcap [1,2] convention
+    //return ((tp_endcap - MIN_ENDCAP) * (NUM_TRIGSECTORS / 2)) + (tp_sector - MIN_TRIGSECTOR);
+    return (tp_endcap * tp_sector); // -6..-1, 1..6
   }
 };
 
@@ -63,6 +64,7 @@ void SegmentPrinter::print_impl(const csc_subsystem_tag::detid_type& detid,
   prop_vec.at(2) = digi.getPattern();
   prop_vec.at(3) = digi.isValid();
   pretty_print{}(std::cout, id_vec, prop_vec);
+
 }
 
 void SegmentPrinter::print_impl(const rpc_subsystem_tag::detid_type& detid,
@@ -122,6 +124,9 @@ void SegmentPrinter::print_impl(const gem_subsystem_tag::detid_type& detid,
   prop_vec.at(2) = digi.pads().back() - digi.pads().front() + 1;
   prop_vec.at(3) = digi.isValid();
   pretty_print{}(std::cout, id_vec, prop_vec);
+
+  std::cout << "GE" << detid.station() << "1-" << id_vec.at(4) << "\t" << digi.pads().front() << ", " << detid.roll() << ", " << prop_vec.at(2) << std::endl;
+
 }
 
 void SegmentPrinter::print_impl(const me0_subsystem_tag::detid_type& detid,
@@ -149,6 +154,9 @@ void SegmentPrinter::print_impl(const me0_subsystem_tag::detid_type& detid,
   prop_vec.at(2) = static_cast<int>(digi.getDeltaphi()) * (static_cast<int>(digi.getBend()) * 2 - 1);
   prop_vec.at(3) = digi.isValid();
   pretty_print{}(std::cout, id_vec, prop_vec);
+
+  std::cout << "ME0-" << detid.chamber() << "\t" << digi.getStrip() << ", " << digi.getPartition() << ", " << std::endl;
+
 }
 
 void SegmentPrinter::print_impl(const EMTFHit& hit) const {

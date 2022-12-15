@@ -66,6 +66,9 @@ private:
   const CSCGeometry* theCSCGeometry_;
   const GEMGeometry* theGEMGeometry_;
   const ME0Geometry* theME0Geometry_;
+
+  const int max_valid_theta_value = 88; // Currently only checked for in non-ME11 csc chambers
+
 };
 
 // _____________________________________________________________________________
@@ -129,11 +132,16 @@ void MakePh2CoordLUT::generateLUTs() {
   int endcap = 1; // [+1,-1]
   int sector = 1; // [1..6]
   
-  generate_csc_LUTs(endcap, sector); // endcap [+1,-1], sector [1..6]
-  generate_me0_LUTs(endcap, sector); // endcap [+1,-1], sector [1..6]
-  generate_gem_LUTs(endcap, sector); // endcap [+1,-1], sector [1..6]
+  for(int endcap=-1; endcap<2; endcap+=2){ 
+    for(int sector=1; sector<=6; sector++){
+      std::cout << "Build Lut for endcap " << endcap << " - Sector " << sector << std::endl;
 
-  quick_LUT_verification(endcap, sector);
+      generate_csc_LUTs(endcap, sector); // endcap [+1,-1], sector [1..6]
+      generate_me0_LUTs(endcap, sector); // endcap [+1,-1], sector [1..6]
+      generate_gem_LUTs(endcap, sector); // endcap [+1,-1], sector [1..6]
+      quick_LUT_verification(endcap, sector);
+    } 
+  }
 }
 
 
@@ -155,18 +163,17 @@ void MakePh2CoordLUT::generate_gem_LUTs(int endcap, int sector){
 
     // Station Dependent Variables
     int num_chambers  = (st == 1)? 7 : 4; // ge11 is 10degs, ge21 is 20degs
-    int chamber       = (st == 1)? first_sector_chambers_ge11[sector_idx] : first_sector_chambers_ge21[sector_idx];
     int num_halfpads  = (st == 1)? (192*2-1)  : (384*2-1); // pads: ge11-192, ge21-384 :  -1 because last halfpad is the center of the last pad (not it's edge)
-    int num_hp_bits   = (st == 1)? 8 : 9; // could change this to 8 for ge11
+    int num_hp_bits   = (st == 1)? 9 : 10; 
     int phi_addr_eta_bits = (st == 1)? 3 : 2;
+    int first_chamber = (st == 1)? first_sector_chambers_ge11[sector_idx] : first_sector_chambers_ge21[sector_idx]; // First chamber number of sector
+    int ch_max = (st == 1)? 36 : 18;
 
     for(int ich=0; ich<num_chambers; ich++){ 
       // Get real chamber number
-      chamber += ich;
-      if(st==1 && chamber > 36) 
-        chamber -= 36;
-      else if(st==2 && chamber > 18)
-        chamber -= 18;
+      int chamber = first_chamber + ich;
+      if(chamber > ch_max)
+        chamber -= ch_max; // Handles wrapping of chambers from 18 or 36 back to 1
 
       // GEM Phi LUT
       int num_phi_addresses = std::pow(2,num_hp_bits + phi_addr_eta_bits);
@@ -179,7 +186,7 @@ void MakePh2CoordLUT::generate_gem_LUTs(int endcap, int sector){
         // Get TP info from address
         int halfpad = (addr >> phi_addr_eta_bits);
         int roll_bitmask = (1 << phi_addr_eta_bits) - 1; // masks bits used as eta info (0x7 or 0x3)
-        int iroll = ((addr & roll_bitmask) << (num_theta_bits - phi_addr_eta_bits)) + 1; // Gets tp partition from address (lowest of possible ones) [1 indexed]
+        int iroll = ((addr & roll_bitmask) << (num_theta_bits - phi_addr_eta_bits)) + 1; // Gets tp partition from address (lowest of possible partitions) [1 indexed]
 
         if(halfpad < num_halfpads){
           GEMDetId detid(endcap, 1, st, 1, chamber, iroll); // (region, ring, station, layer, chamber, roll )
@@ -290,7 +297,7 @@ void MakePh2CoordLUT::generate_me0_LUTs(int endcap, int sector){
         phi_int = toolbox::calc_phi_int(phi_degs, sector);
 
         // Special ME0 case for chamber edge beyond sector 
-        if(phi_int > 5040) // equivalent to ~84 degrees (this handle cases before and after sector edge bc of how colc_phi_int() works)
+        if(phi_int > 5040 || phi_int < 0) // equivalent to ~84 degrees (this handle cases before and after sector edge)
           phi_int = 0;
       }
 
@@ -333,7 +340,7 @@ void MakePh2CoordLUT::generate_me0_LUTs(int endcap, int sector){
 
     // Fill ME0 Theta LUT
     std::stringstream theta_filename; 
-    theta_filename << "PC_LUTs/endap" << endcap << "/sector" << sector << "/ME0_theta_ch" << ich << ".txt";
+    theta_filename << "PC_LUTs/endcap" << endcap << "/sector" << sector << "/ME0_theta_ch" << ich << ".txt";
     std::ofstream thetaFile(theta_filename.str());
     for (auto theta : chamber_theta_LUT) thetaFile << theta << ", ";
     thetaFile.close();
@@ -385,14 +392,16 @@ void MakePh2CoordLUT::generate_ME11_csc_LUT(int endcap, int sector, int ch, int 
   
   int st = 1;
 
-  // ME11b
-  CSCDetId b_detid(endcap, st, 1, ch, CSCConstants::KEY_CLCT_LAYER); // Ring 1 - me11b
+  int csc_endcap = (endcap == -1)? 2 : 1; // For detid, endcap 2 is negative endcap
+
+  // ME11b (first 64 strips of input, but upper part of chamber)
+  CSCDetId b_detid(csc_endcap, st, 1, ch, CSCConstants::KEY_CLCT_LAYER); // Ring 1 - me11b
   const CSCChamber* b_chamb = theCSCGeometry_->chamber(b_detid);
   const CSCLayer* b_layer = b_chamb->layer(CSCConstants::KEY_ALCT_LAYER);
   const CSCLayerGeometry* b_layer_geom = b_layer->geometry();
 
   // ME11a
-  CSCDetId a_detid(endcap, st, 4, ch, CSCConstants::KEY_CLCT_LAYER); // "Ring 4" - me11a
+  CSCDetId a_detid(csc_endcap, st, 4, ch, CSCConstants::KEY_CLCT_LAYER); // "Ring 4" - me11a
   const CSCChamber* a_chamb = theCSCGeometry_->chamber(a_detid);
   const CSCLayer* a_layer = a_chamb->layer(CSCConstants::KEY_ALCT_LAYER);
   const CSCLayerGeometry* a_layer_geom = a_layer->geometry();
@@ -430,7 +439,7 @@ void MakePh2CoordLUT::generate_ME11_csc_LUT(int endcap, int sector, int ch, int 
         // In me11b address space
         GlobalPoint gp = get_csc_global_point(b_layer_geom, b_layer, wg, eighth_strip);
         float phi_degs = toolbox::rad_to_deg(gp.barePhi());
-        if( fw_wg > 0) // wiregroups 1-8 don't overlap with me11b
+        if( fw_wg > 0) // wiregroups 1-8 don't overlap with me11b (fw_wg [0] is wg [1])
           phi_int = toolbox::calc_phi_int(phi_degs, sector);
       }
       else if( (eighth_strip/8) < (me11b_strips + me11a_strips)){ // Check that 1/8th strip is in range
@@ -469,6 +478,7 @@ void MakePh2CoordLUT::generate_ME11_csc_LUT(int endcap, int sector, int ch, int 
             theta_int = toolbox::calc_theta_int(theta_degs, endcap);
         }
         else{
+          eighth_strip = eighth_strip - (me11b_strips * 8); // Remove ME11a strip offset
           GlobalPoint gp = get_csc_global_point(a_layer_geom, a_layer, wg, eighth_strip);
           float theta_degs = toolbox::rad_to_deg(gp.theta());
           if(wg < 17)
@@ -495,7 +505,9 @@ void MakePh2CoordLUT::generate_ME11_csc_LUT(int endcap, int sector, int ch, int 
 
 void MakePh2CoordLUT::generate_nonME11_csc_LUT(int endcap, int sector, int st, int ring, int ch, int ich){
 
-  CSCDetId detid(endcap, st, ring, ch, CSCConstants::KEY_CLCT_LAYER);
+  int csc_endcap = (endcap == -1)? 2 : 1; // For detid, endcap 2 is negative endcap
+
+  CSCDetId detid(csc_endcap, st, ring, ch, CSCConstants::KEY_CLCT_LAYER);
   const CSCChamber* chamb = theCSCGeometry_->chamber(detid);
   const CSCLayer* layer = chamb->layer(CSCConstants::KEY_ALCT_LAYER);
   const CSCLayerGeometry* layer_geom = layer->geometry();
@@ -546,6 +558,9 @@ void MakePh2CoordLUT::generate_nonME11_csc_LUT(int endcap, int sector, int st, i
         theta_int = toolbox::calc_theta_int(theta_degs, endcap);
       }
       
+      if(theta_int > max_valid_theta_value) 
+        theta_int = 0;
+
       chamber_theta_LUT.push_back(theta_int);
   }
 
@@ -578,32 +593,119 @@ GlobalPoint MakePh2CoordLUT::get_csc_global_point(const CSCLayerGeometry* layer_
 
 
 void MakePh2CoordLUT::quick_LUT_verification(int endcap, int sector){
+
+  const std::string site_strings[18] = {
+    "ME0", "GE11", "ME11", "ME12", "RE12", "GE21", "RE22", "ME21", "ME22", "ME31", "ME32", "RE31", "RE32", "ME41", "ME42", "RE41", "RE42", "ME13"
+  };
+
+  enum ch_types{ ten_deg, twenty_deg, twenty_me0};
+  int site_types[18] = {
+                        twenty_me0,                                   // ME0 
+                        ten_deg,  ten_deg,  ten_deg,  ten_deg,        // GE11, ME11, ME12, RE12, 
+                        twenty_deg,   ten_deg,  twenty_deg, ten_deg,  // GE21, RE22, ME21, ME22
+                        twenty_deg,   ten_deg,  twenty_deg, ten_deg,  // ME31, ME32, RE31, RE32
+                        twenty_deg,   ten_deg,  twenty_deg, ten_deg,  // ME41, ME42, RE41, RE42
+                        ten_deg // ME13
+  };
+
   int ph_hard_init_10deg[7] = {38, 75, 113, 150, 188, 225, 263};
   int ph_hard_init_20deg[4] = {0,  75, 150, 225};
   int ph_hard_init_me0[5] =   {0,  56, 131, 206, 281};
-
   int cover_10deg = 53;
   int cover_20deg = 90;
   int cover_me0 = 90;
 
-  // Check ME11
-  for(int ich=0; ich<7; ich++){
-    std::stringstream phi_filename;
-    phi_filename << "PC_LUTs/endcap" << endcap << "/sector" << sector << "/ME11_phi_ch" << ich << ".txt";
-    std::ifstream phiFile(phi_filename.str());  
+  // These are based on JFs zoning
+  // Question- For Ring 2 chambers, do I want to invalidate values in overlap region?
+  const int chamber_theta_ranges[18][2] = {
+    {4,  23}, // ME0
+    {17, 52}, // GE11
+    {4,  53}, // ME11
+    {46, 88}, // ME12
+    {52, 84}, // RE12
+    {7,  46}, // GE21
+    {52, 88}, // RE22
+    {4,  49}, // ME21
+    {52, 88}, // ME22
+    {4,  41}, // ME31
+    {44, 88}, // ME32
+    {4,  36}, // RE31
+    {40, 84}, // RE32
+    {4,  35}, // ME41
+    {38, 88}, // ME42
+    {4,  31}, // RE41
+    {35, 84}, // RE42
+    {0, 1000}  // ME13 -- not real values
+  };
+
+  // Quick check that all chambers are within valid ranges
+  for(int site=0; site<18; site++){
+    if(site == 4 || site == 6 || site == 11 || site == 12 || site == 15 || site == 16)
+      continue;
     
-    int val, col_val;
-    char comma;
-    int addr = 0;
-    while(phiFile >> val >> comma){
-      col_val = (val >> 4);
-      if( val != 0 && (col_val < ph_hard_init_10deg[ich] || (col_val > (ph_hard_init_10deg[ich] + cover_10deg))))
-        std::cout << "ERROR - VALUE IS OUT OF RANGE - ADDR: " << addr << "\tValue: " << val << " - " << col_val << std::endl;
-      addr++;
-    }
-  
-    std::cout << "Final Address: " << addr << std::endl;
-  }
+    int type = site_types[site];
+    int num_chambers = (type == ten_deg)? 7 : (type == twenty_deg)? 4 : 5;
+
+    for(int ich=0; ich<num_chambers; ich++){
+
+      // Get valid column ranges
+      int col_min, col_max; 
+      if(type == ten_deg){ 
+        col_min = ph_hard_init_10deg[ich];
+        col_max = ph_hard_init_10deg[ich] + cover_10deg;
+      }
+      else if(type == twenty_deg){
+        col_min = ph_hard_init_20deg[ich];
+        col_max = ph_hard_init_20deg[ich] + cover_20deg;
+      }
+      else{ 
+        col_min = ph_hard_init_me0[ich];
+        col_max = ph_hard_init_me0[ich] + cover_me0;
+      }
+
+      
+      int val, col_val, addr = 0;
+      char comma;
+
+      // Check Phi
+      std::stringstream phi_filename;
+      phi_filename << "PC_LUTs/endcap" << endcap << "/sector" << sector << "/" << site_strings[site] << "_phi_ch" << ich << ".txt";
+      std::ifstream phiFile(phi_filename.str());  
+
+      if(phiFile.is_open()){
+        while(phiFile >> val >> comma){
+          col_val = (val >> 4);
+          if( val != 0 && (col_val < col_min || col_val > col_max || col_val > 315 ))
+            std::cout << site_strings[site] << " - ERROR - VALUE IS OUT OF RANGE - ADDR: " << addr << "\tValue: " << val << " - " << col_val << std::endl;
+          addr++;
+        }
+      }
+      else{
+        std::cout << "Error - Not able to open file: " << phi_filename.str() << std::endl;
+      }
+      std::cout << site_strings[site] << " phi final address: " << addr << std::endl;
+
+
+
+      // Check Theta
+      std::stringstream theta_filename;
+      theta_filename << "PC_LUTs/endcap" << endcap << "/sector" << sector << "/" << site_strings[site] << "_theta_ch" << ich << ".txt";
+      std::ifstream thetaFile(theta_filename.str());  
+
+      addr = 0;
+      if(thetaFile.is_open()){
+        while(thetaFile >> val >> comma){
+          if( val != 0 && (val < chamber_theta_ranges[site][0] || val > chamber_theta_ranges[site][1])){
+            //std::cout << site_strings[site] << " - Warning - Value may be out of range (or in overlap region) - ADDR: " << addr << "\tValue: " << val << std::endl;
+          }
+          addr++;
+        }
+      }
+      std::cout << site_strings[site] << " theta final address: " << addr << std::endl;
+
+
+    } // ch
+  } // site
 
 }
 
