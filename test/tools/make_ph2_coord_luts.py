@@ -1,19 +1,19 @@
 import FWCore.ParameterSet.Config as cms
 
-from Configuration.Eras.Era_Phase2C9_cff import Phase2C9
+from Configuration.Eras.Era_Phase2C18I13M9_cff import Phase2C18I13M9
+process = cms.Process("GenEMTFLuts",Phase2C18I13M9)
 
-process = cms.Process("GenEMTFLuts",Phase2C9)
+# Use standard seq to load geom (?)
+#process.load('Configuration.StandardSequences.GeometryRecoDB_cff')  # load from DB
 
-process.load('Configuration.StandardSequences.Services_cff')
-process.load('FWCore.MessageService.MessageLogger_cfi')
-process.load('Configuration.Geometry.GeometryExtended2026D49Reco_cff')
-process.load('Configuration.Geometry.GeometryExtended2026D49_cff')
-process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
+# load geometries directly
+process.load('Configuration.Geometry.GeometryExtended2026D88_cff')
+process.load('Configuration.Geometry.GeometryExtended2026D88Reco_cff')
 
 
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic', '')
-print "Using GlobalTag: %s" % process.GlobalTag.globaltag.value()
+print("Using GlobalTag: ", process.GlobalTag.globaltag.value())
 
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(1))
 

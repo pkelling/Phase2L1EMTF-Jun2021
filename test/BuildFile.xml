@@ -1,18 +1,11 @@
 <environment>
-  <bin name="TestDebugMacros" file="unittests/TestDebugMacros.cpp">
-    <use name="L1Trigger/Phase2L1EMTF"/>
-    <use name="cppunit"/>
-  </bin>
-</environment>
-
-<environment>
   <export>
 </export>
   <library file="tools/*.cc" name="L1TriggerL1TMuonEndCap_tools">
     <use name="L1Trigger/L1TMuonEndCap"/>
-    <use name="Geometry/DTGeometry"/>
     <use name="Geometry/RPCGeometry"/>
     <use name="Geometry/CSCGeometry"/>
+    <use name="Geometry/GEMGeometry"/>
     <use name="root"/>
     <flags EDM_PLUGIN="1"/>
   </library>

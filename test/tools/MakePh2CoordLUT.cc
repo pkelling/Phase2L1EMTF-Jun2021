@@ -5,19 +5,19 @@
 #include <iostream>
 
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "FWCore/Framework/interface/one/EDAnalyzer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/ESHandle.h"
-#include "FWCore/Framework/interface/ESWatcher.h"
+//#include "FWCore/Framework/interface/ESWatcher.h"
 
 #include "DataFormats/GeometryVector/interface/LocalPoint.h"
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h"
 #include "DataFormats/MuonDetId/interface/CSCDetId.h"
 #include "DataFormats/MuonDetId/interface/CSCTriggerNumbering.h"
-#include "L1Trigger/CSCCommonTrigger/interface/CSCConstants.h"
+#include "DataFormats/CSCDigi/interface/CSCConstants.h"
 
 #include "L1Trigger/Phase2L1EMTF/interface/Toolbox.h"
 
@@ -30,16 +30,16 @@
 using namespace emtf::phase2;
 
 
-class MakePh2CoordLUT : public edm::EDAnalyzer {
+class MakePh2CoordLUT : public edm::one::EDAnalyzer<edm::one::WatchRuns> {
 public:
   explicit MakePh2CoordLUT(const edm::ParameterSet&);
-  virtual ~MakePh2CoordLUT();
+  ~MakePh2CoordLUT() override;
 
 private:
-  virtual void beginRun(const edm::Run&, const edm::EventSetup&);
-  virtual void endRun(const edm::Run&, const edm::EventSetup&);
+  void beginRun(const edm::Run&, const edm::EventSetup&) override;
+  void endRun(const edm::Run&, const edm::EventSetup&) override;
 
-  virtual void analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup);
+  void analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) override;
 
   // Generate LUTs
   void generateLUTs();
@@ -63,6 +63,10 @@ private:
   bool done_;
 
   /// Event setup
+  edm::ESGetToken<CSCGeometry, MuonGeometryRecord> theCSCGeometryToken_;
+  edm::ESGetToken<GEMGeometry, MuonGeometryRecord> theGEMGeometryToken_;
+  edm::ESGetToken<ME0Geometry, MuonGeometryRecord> theME0GeometryToken_;
+
   const CSCGeometry* theCSCGeometry_;
   const GEMGeometry* theGEMGeometry_;
   const ME0Geometry* theME0Geometry_;
@@ -75,7 +79,11 @@ private:
 
 MakePh2CoordLUT::MakePh2CoordLUT(const edm::ParameterSet& iConfig)
     : config_(iConfig),
-      done_(false){
+      done_(false),
+      theCSCGeometryToken_(esConsumes<edm::Transition::BeginRun>()), //   (esConsumes()),
+      theGEMGeometryToken_(esConsumes<edm::Transition::BeginRun>()), //   (esConsumes()),
+      theME0GeometryToken_(esConsumes<edm::Transition::BeginRun>())  //   (esConsumes()),
+{
   std::cout << "Initializing MakePh2CoordLUT\n";
 }
 
@@ -88,22 +96,24 @@ void MakePh2CoordLUT::beginRun(const edm::Run& iRun, const edm::EventSetup& iSet
   /// Setup Geometries
 
   // CSC Geometry
-  edm::ESHandle<CSCGeometry> cscGeometryHandle;
-  iSetup.get<MuonGeometryRecord>().get(cscGeometryHandle);
+  edm::ESHandle<CSCGeometry> cscGeometryHandle = iSetup.getHandle(theCSCGeometryToken_);
   assert(cscGeometryHandle.isValid());
   theCSCGeometry_ = cscGeometryHandle.product();
+  std::cout << "Got CSC Geometry\n";
 
   // GEM Geometry
-  edm::ESHandle<GEMGeometry> gemGeometryHandle;
-  iSetup.get<MuonGeometryRecord>().get(gemGeometryHandle);
+  edm::ESHandle<GEMGeometry> gemGeometryHandle = iSetup.getHandle(theGEMGeometryToken_);
   assert(gemGeometryHandle.isValid());
   theGEMGeometry_ = gemGeometryHandle.product();
+  std::cout << "Got GEM Geometry\n";
 
   // ME0 Geometry
-  edm::ESHandle<ME0Geometry> me0GeometryHandle;
-  iSetup.get<MuonGeometryRecord>().get(me0GeometryHandle);
+  /*
+  edm::ESHandle<ME0Geometry> me0GeometryHandle = iSetup.getHandle(theME0GeometryToken_);
   assert(me0GeometryHandle.isValid());
   theME0Geometry_ = me0GeometryHandle.product();
+  std::cout << "Got ME0 Geometry\n";
+  */
 }
 
 
