@@ -3,6 +3,7 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include <filesystem>
 
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/one/EDAnalyzer.h"
@@ -137,12 +138,19 @@ void MakePh2CoordLUT::analyze(const edm::Event& iEvent, const edm::EventSetup& i
 void MakePh2CoordLUT::generateLUTs() {
   std::cout << "Running generateLUTs()\n";
 
-  int endcap = 1; // [+1,-1]
-  int sector = 1; // [1..6]
+  //int endcap = 1; // [+1,-1]
+  //int sector = 1; // [1..6]
+
+  //std::filesystem::current_path(std::filesystem::temp_directory_path());
   
   for(int endcap=-1; endcap<2; endcap+=2){ 
     for(int sector=1; sector<=6; sector++){
       std::cout << "Build Lut for endcap " << endcap << " - Sector " << sector << std::endl;
+
+      // Add Directories
+      std::stringstream fns;
+      fns << "PC_LUTs/endcap" << endcap << "/sector" << sector;
+      std::filesystem::create_directories(fns.str());
 
       generate_csc_LUTs(endcap, sector); // endcap [+1,-1], sector [1..6]
       generate_me0_LUTs(endcap, sector); // endcap [+1,-1], sector [1..6]
@@ -626,9 +634,9 @@ void MakePh2CoordLUT::quick_LUT_verification(int endcap, int sector){
   // These are based on JFs zoning
   // Question- For Ring 2 chambers, do I want to invalidate values in overlap region?
   const int chamber_theta_ranges[18][2] = {
-    {4,  23}, // ME0
+    {1,  23}, // ME0   // JF had this starting as 4
     {17, 52}, // GE11
-    {4,  53}, // ME11
+    {4,  54}, // ME11  // JF had chamber max as 53
     {46, 88}, // ME12
     {52, 84}, // RE12
     {7,  46}, // GE21
@@ -691,7 +699,7 @@ void MakePh2CoordLUT::quick_LUT_verification(int endcap, int sector){
       else{
         std::cout << "Error - Not able to open file: " << phi_filename.str() << std::endl;
       }
-      std::cout << site_strings[site] << " phi final address: " << addr << std::endl;
+      //std::cout << site_strings[site] << " phi final address: " << addr << std::endl;
 
 
 
@@ -704,12 +712,12 @@ void MakePh2CoordLUT::quick_LUT_verification(int endcap, int sector){
       if(thetaFile.is_open()){
         while(thetaFile >> val >> comma){
           if( val != 0 && (val < chamber_theta_ranges[site][0] || val > chamber_theta_ranges[site][1])){
-            //std::cout << site_strings[site] << " - Warning - Value may be out of range (or in overlap region) - ADDR: " << addr << "\tValue: " << val << std::endl;
+            std::cout << site_strings[site] << " - Warning - Value may be out of range (or in overlap region) - ADDR: " << addr << "\tValue: " << val << std::endl;
           }
           addr++;
         }
       }
-      std::cout << site_strings[site] << " theta final address: " << addr << std::endl;
+      //std::cout << site_strings[site] << " theta final address: " << addr << std::endl;
 
 
     } // ch
