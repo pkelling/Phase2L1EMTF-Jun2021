@@ -1,15 +1,16 @@
 import FWCore.ParameterSet.Config as cms
 
-from Configuration.Eras.Era_Phase2C18I13M9_cff import Phase2C18I13M9
-process = cms.Process("GenEMTFLuts",Phase2C18I13M9)
+from Configuration.Eras.Era_Phase2C12_cff import Phase2C12
+process = cms.Process("GenEMTFLuts",Phase2C12)
 
 # Use standard seq to load geom (?)
 #process.load('Configuration.StandardSequences.GeometryRecoDB_cff')  # load from DB
 
 # load geometries directly
-process.load('Configuration.Geometry.GeometryExtended2026D88_cff')
-process.load('Configuration.Geometry.GeometryExtended2026D88Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2026D70_cff')
+process.load('Configuration.Geometry.GeometryExtended2026D70Reco_cff')
 
+process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic', '')

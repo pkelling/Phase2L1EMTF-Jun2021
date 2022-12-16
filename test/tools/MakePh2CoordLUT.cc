@@ -108,12 +108,10 @@ void MakePh2CoordLUT::beginRun(const edm::Run& iRun, const edm::EventSetup& iSet
   std::cout << "Got GEM Geometry\n";
 
   // ME0 Geometry
-  /*
   edm::ESHandle<ME0Geometry> me0GeometryHandle = iSetup.getHandle(theME0GeometryToken_);
   assert(me0GeometryHandle.isValid());
   theME0Geometry_ = me0GeometryHandle.product();
   std::cout << "Got ME0 Geometry\n";
-  */
 }
 
 
