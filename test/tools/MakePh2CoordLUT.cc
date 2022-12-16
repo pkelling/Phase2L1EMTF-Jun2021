@@ -25,7 +25,6 @@
 #include "Geometry/CSCGeometry/interface/CSCGeometry.h"
 #include "Geometry/RPCGeometry/interface/RPCGeometry.h"
 #include "Geometry/GEMGeometry/interface/GEMGeometry.h"
-#include "Geometry/GEMGeometry/interface/ME0Geometry.h"
 #include "Geometry/Records/interface/MuonGeometryRecord.h"
 
 using namespace emtf::phase2;
@@ -66,11 +65,9 @@ private:
   /// Event setup
   edm::ESGetToken<CSCGeometry, MuonGeometryRecord> theCSCGeometryToken_;
   edm::ESGetToken<GEMGeometry, MuonGeometryRecord> theGEMGeometryToken_;
-  edm::ESGetToken<ME0Geometry, MuonGeometryRecord> theME0GeometryToken_;
 
   const CSCGeometry* theCSCGeometry_;
   const GEMGeometry* theGEMGeometry_;
-  const ME0Geometry* theME0Geometry_;
 
   const int max_valid_theta_value = 88; // Currently only checked for in non-ME11 csc chambers
 
@@ -82,8 +79,7 @@ MakePh2CoordLUT::MakePh2CoordLUT(const edm::ParameterSet& iConfig)
     : config_(iConfig),
       done_(false),
       theCSCGeometryToken_(esConsumes<edm::Transition::BeginRun>()), //   (esConsumes()),
-      theGEMGeometryToken_(esConsumes<edm::Transition::BeginRun>()), //   (esConsumes()),
-      theME0GeometryToken_(esConsumes<edm::Transition::BeginRun>())  //   (esConsumes()),
+      theGEMGeometryToken_(esConsumes<edm::Transition::BeginRun>())  //   (esConsumes()),
 {
   std::cout << "Initializing MakePh2CoordLUT\n";
 }
@@ -108,11 +104,6 @@ void MakePh2CoordLUT::beginRun(const edm::Run& iRun, const edm::EventSetup& iSet
   theGEMGeometry_ = gemGeometryHandle.product();
   std::cout << "Got GEM Geometry\n";
 
-  // ME0 Geometry
-  edm::ESHandle<ME0Geometry> me0GeometryHandle = iSetup.getHandle(theME0GeometryToken_);
-  assert(me0GeometryHandle.isValid());
-  theME0Geometry_ = me0GeometryHandle.product();
-  std::cout << "Got ME0 Geometry\n";
 }
 
 
@@ -155,9 +146,16 @@ void MakePh2CoordLUT::generateLUTs() {
       generate_csc_LUTs(endcap, sector); // endcap [+1,-1], sector [1..6]
       generate_me0_LUTs(endcap, sector); // endcap [+1,-1], sector [1..6]
       generate_gem_LUTs(endcap, sector); // endcap [+1,-1], sector [1..6]
+    } 
+  }
+
+  std::cout << "Verifying that table outputs are within hard-coded ph_init and theta ranges.\n";
+  for(int endcap=-1; endcap<2; endcap+=2){ 
+    for(int sector=1; sector<=6; sector++){
       quick_LUT_verification(endcap, sector);
     } 
   }
+
 }
 
 
@@ -299,10 +297,8 @@ void MakePh2CoordLUT::generate_me0_LUTs(int endcap, int sector){
       if(halfstrip < num_halfstrips){ // Rest of addresses are invalid
         // Get Chamber Partition
         int ch_partition = (tp_partition >> 1) + 1; // the actual partition in the chamber (1 indexed)
-        ME0DetId detid(endcap, 0, chamber, ch_partition);
-        const ME0Chamber* chamb = theME0Geometry_->chamber(detid);
-        const ME0Layer* layer = chamb->layer(CSCConstants::KEY_ALCT_LAYER); // Eventually change this to ME0 key layer
-        const ME0EtaPartition* roll = layer->etaPartition(ch_partition);
+        GEMDetId detid(endcap, 1, 0, CSCConstants::KEY_ALCT_LAYER, chamber, ch_partition); // (region, ring, station, layer, chamber, roll )
+        const GEMEtaPartition* roll = theGEMGeometry_->etaPartition(detid);
 
         // Get Global Point
         const float center_of_halfstrip = (0.5f * halfstrip) +  0.25; // Get center of halfstrip (0->1 is strip 1, so middle of hs 0 is 0.25)
@@ -331,10 +327,8 @@ void MakePh2CoordLUT::generate_me0_LUTs(int endcap, int sector){
       int ch_partition = (tp_partition >> 1) + 1; // the actual partition in the chamber (1 indexed)
 
       // Get Chamber Partition
-      ME0DetId detid(endcap, 0, chamber, ch_partition);
-      const ME0Chamber* chamb = theME0Geometry_->chamber(detid);
-      const ME0Layer* layer = chamb->layer(CSCConstants::KEY_ALCT_LAYER); // Eventually change this to ME0 key layer
-      const ME0EtaPartition* roll = layer->etaPartition(ch_partition);
+      GEMDetId detid(endcap, 1, 0, CSCConstants::KEY_ALCT_LAYER, chamber, ch_partition); // (region, ring, station, layer, chamber, roll )
+      const GEMEtaPartition* roll = theGEMGeometry_->etaPartition(detid);
 
       // Get Global Point
       const float strip = (0.25f * num_halfstrips);  // Gets halfstrip in ~middle of chamber (strip 192)
