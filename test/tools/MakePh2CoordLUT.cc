@@ -141,8 +141,6 @@ void MakePh2CoordLUT::generateLUTs() {
   //int endcap = 1; // [+1,-1]
   //int sector = 1; // [1..6]
 
-  //std::filesystem::current_path(std::filesystem::temp_directory_path());
-  
   for(int endcap=-1; endcap<2; endcap+=2){ 
     for(int sector=1; sector<=6; sector++){
       std::cout << "Build Lut for endcap " << endcap << " - Sector " << sector << std::endl;
@@ -155,9 +153,16 @@ void MakePh2CoordLUT::generateLUTs() {
       generate_csc_LUTs(endcap, sector); // endcap [+1,-1], sector [1..6]
       generate_me0_LUTs(endcap, sector); // endcap [+1,-1], sector [1..6]
       generate_gem_LUTs(endcap, sector); // endcap [+1,-1], sector [1..6]
-      quick_LUT_verification(endcap, sector);
     } 
   }
+
+
+  std::cout << "Verifying LUTs\n";
+  for(int endcap=-1; endcap<2; endcap+=2)
+    for(int sector=1; sector<=6; sector++)
+      quick_LUT_verification(endcap, sector);
+
+
 }
 
 
