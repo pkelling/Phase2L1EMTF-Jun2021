@@ -20,7 +20,7 @@
 #include "DataFormats/MuonDetId/interface/CSCTriggerNumbering.h"
 #include "DataFormats/CSCDigi/interface/CSCConstants.h"
 
-#include "L1Trigger/Phase2L1EMTF/interface/Toolbox.h"
+#include "L1Trigger/Phase2L1EMTF/test/tools/Toolbox.h"
 
 #include "Geometry/CSCGeometry/interface/CSCGeometry.h"
 #include "Geometry/RPCGeometry/interface/RPCGeometry.h"
